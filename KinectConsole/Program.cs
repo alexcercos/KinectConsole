@@ -13,8 +13,12 @@ namespace KinectConsole
         IList<Body> _bodies;
 
         IList<JointType> joints;
+        IList<float> joint_positions;
+        
+        bool detected_body;
 
-        public string current_info;
+        const float AVG_PERCENT = 0.2f;
+        float applied_avg = 1.0f; //For first frame (avoid conditionals)
 
         public void Initialize()
         {
@@ -27,6 +31,8 @@ namespace KinectConsole
                 _reader = _sensor.OpenMultiSourceFrameReader(FrameSourceTypes.Color | FrameSourceTypes.Depth | FrameSourceTypes.Infrared | FrameSourceTypes.Body);
                 _reader.MultiSourceFrameArrived += Reader_MultiSourceFrameArrived;
             }
+
+            detected_body = false;
 
             joints = new List<JointType> {
                 JointType.SpineBase,
@@ -56,6 +62,8 @@ namespace KinectConsole
 
                 //Exclude hands
             };
+
+            joint_positions = new List<float>(new float[joints.Count*3]);
         }
 
         public void Deinitialize()
@@ -73,7 +81,23 @@ namespace KinectConsole
 
         public string GetCurrentInfo()
         {
-            return current_info;
+            if (!detected_body) return "";
+
+            //Reset state
+            detected_body = false;
+
+            StringBuilder finalString = new StringBuilder();
+
+            for (int i=0; i<joint_positions.Count; i++)
+            {
+                finalString.AppendFormat("{0:0.000},", joint_positions[i]);
+            }
+
+            // Remove the trailing comma
+            if (finalString.Length > 0)
+                finalString.Length--;
+            
+            return finalString.ToString();
         }
 
         void Reader_MultiSourceFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
@@ -97,19 +121,19 @@ namespace KinectConsole
                         if (!body.IsTracked)
                             continue;
 
-                        StringBuilder jointPositions = new StringBuilder();
-
-                        foreach (JointType joint in joints)
+                        for (int i=0; i<joints.Count; i++)
                         {
-                            var position = body.Joints[joint].Position;
-                            jointPositions.AppendFormat("{0:0.000},{1:0.000},{2:0.000},", position.X, position.Y, position.Z);
+                            var position = body.Joints[joints[i]].Position;
+
+                            joint_positions[i * 3 + 0] = position.X * applied_avg + joint_positions[i * 3 + 0] * (1.0f - applied_avg);
+                            joint_positions[i * 3 + 1] = position.Y * applied_avg + joint_positions[i * 3 + 1] * (1.0f - applied_avg);
+                            joint_positions[i * 3 + 2] = position.Z * applied_avg + joint_positions[i * 3 + 2] * (1.0f - applied_avg);
+
                         }
 
-                        // Remove the trailing comma
-                        if (jointPositions.Length > 0)
-                            jointPositions.Length--;
-
-                        current_info = jointPositions.ToString();
+                        applied_avg = AVG_PERCENT; //Set after first frame
+                        detected_body = true;
+                        break;
                     }
                 }
             }
