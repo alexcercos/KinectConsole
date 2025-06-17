@@ -6,7 +6,9 @@ import requests
 
 import serial
 
-def convert_json(values_raw, value_names, error_str="ERROR: WRONG VALUE LENGTH", ts):
+import open3d as o3d
+
+def convert_json(values_raw, value_names, error_str, ts):
     json_obj = {}
     values = values_raw.split(',')
 
@@ -21,12 +23,12 @@ def convert_json(values_raw, value_names, error_str="ERROR: WRONG VALUE LENGTH",
 
     return json_obj
 
-def convert_json_kinect(values_raw, value_names, error_str="ERROR: WRONG VALUE LENGTH", ts):
+def convert_json_kinect(values_raw, value_names, error_str):
     json_obj = {}
     values = values_raw.split(',')
 
     if len(values)!=len(value_names)*3:
-        print(error_str)
+        print(error_str,len(values),len(value_names)*3)
         return json_obj
 
     for i,n in enumerate(value_names):
@@ -35,9 +37,24 @@ def convert_json_kinect(values_raw, value_names, error_str="ERROR: WRONG VALUE L
             "y": float(values[i*3+1]),
             "z": float(values[i*3+2]),
         }
-    json_obj["timestamp"] = ts
 
     return json_obj
+
+def create_initial_dict(value_names):
+    json_obj = {}
+
+    for n in value_names:
+        json_obj[n] = {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+        }
+
+    return json_obj
+
+def get_exercise():
+    return "biceps"
+
 
 pox_names = ["total_phase","breath_phase","heart_phase","breath_rate","heart_rate","distance"]
 kinect_names = [
@@ -45,8 +62,18 @@ kinect_names = [
     "shoulder_left","elbow_left","wrist_left","hand_left",
     "shoulder_right","elbow_right","wrist_right","hand_right",
     "hip_left","knee_left","ankle_left","foot_left",
-    "hip_right","knee_right","ankle_right","foot_right"
+    "hip_right","knee_right","ankle_right","foot_right",
+    "spine_shoulder"
 ]
+
+kinect_connections = [
+    ("head", "neck"),("neck", "spine_shoulder"),("spine_shoulder","spine_mid"),("spine_mid","spine_base"),
+    ("spine_shoulder","shoulder_left"),("shoulder_left","elbow_left"),("elbow_left","wrist_left"),("wrist_left","hand_left"),
+    ("spine_shoulder","shoulder_right"),("shoulder_right","elbow_right"),("elbow_right","wrist_right"),("wrist_right","hand_right"),
+    ("spine_base","hip_left"),("hip_left","knee_left"),("knee_left","ankle_left"),("ankle_left","foot_left"),
+    ("spine_base","hip_right"),("hip_right","knee_right"),("knee_right","ankle_right"),("ankle_right","foot_right")
+]
+
 SERIAL_PORT = "COM5"
 BAUD_RATE = 115200
 
@@ -69,26 +96,75 @@ except serial.SerialException:
     print(f"Could not open serial port {SERIAL_PORT}. Check connection")
     ser = None
 
+debug_lines = True
+vis = None
+
+exercise = None
+line_set = None
+pcd = None
+
 try:
-    print("START",ser is None)
     i=0
+    running = False
+
+    if debug_lines:
+        vis = o3d.visualization.Visualizer()
+        vis.create_window()
+
+        kinect_json = create_initial_dict(kinect_names)
+        points = [[v["x"], v["y"], v["z"]] for v in kinect_json.values()]
+        lines = [[list(kinect_json.keys()).index(a), list(kinect_json.keys()).index(b)] for a, b in kinect_connections]
+        
+        line_set = o3d.geometry.LineSet(
+            points=o3d.utility.Vector3dVector(points),
+            lines=o3d.utility.Vector2iVector(lines),
+        )
+        vis.add_geometry(line_set)
+
+        coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0)
+        vis.add_geometry(coord_frame)
+
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(points)
+        pcd.paint_uniform_color([0, 1, 0])  # Green points
+
+        vis.add_geometry(pcd)
+
     while True:
         
+        exercise = get_exercise()
+
+        if exercise is None:
+            time.sleep(0.5)
+            continue
+
         # READ KINECT
         time_val = time.time()
 
-        line = process.stdout.readline()
+        line = process.stdout.readline().strip()
 
-        if line:
-            l_str = line.strip()
+        if line != "":
 
             #Make json
-            json_obj = convert_json(l_str, kinect_names, "ERROR: WRONG KINECT VALUE LENGTH",time_val)
+            kinect_json = convert_json_kinect(line, kinect_names, "ERROR: WRONG KINECT VALUE LENGTH")
+
+            if debug_lines:
+                points = [[v["x"], v["y"], v["z"]] for v in kinect_json.values()]
+                line_set.points = o3d.utility.Vector3dVector(points)
+                pcd.points = o3d.utility.Vector3dVector(points)
+                vis.update_geometry(line_set)
+                vis.update_geometry(pcd)
+                vis.poll_events()
+                vis.update_renderer()
+
+            kinect_json["timestamp"] = time_val
 
 
-            if l_str != "":
-                print(f"KINECT ({i}):", l_str)
-                i+=1
+            print(f"KINECT ({i}):", line)
+            i+=1
+        elif debug_lines:
+            vis.poll_events()
+            vis.update_renderer()
         
         # READ POX
 
@@ -97,7 +173,7 @@ try:
 
         line = ser.readline().decode("utf-8").strip()
 
-        if line:
+        if line != "":
 
             json_obj = convert_json(line, pox_names, "ERROR: WRONG POX VALUE LENGTH",time_val)
             
@@ -110,6 +186,9 @@ except KeyboardInterrupt:
     print('Interrupted')
 
 finally:
+
+    if debug_lines:
+        vis.destroy_window()
 
     # Send CTRL_BREAK_EVENT (can only be sent to process groups)
     process.send_signal(signal.CTRL_BREAK_EVENT)

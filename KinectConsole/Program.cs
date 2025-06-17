@@ -3,6 +3,7 @@ using System.Threading;
 using Microsoft.Kinect;
 using System.Collections.Generic;
 using System.Text;
+using System.Globalization;
 
 namespace KinectConsole
 {
@@ -58,7 +59,9 @@ namespace KinectConsole
                 JointType.HipRight,
                 JointType.KneeRight,
                 JointType.AnkleRight,
-                JointType.FootRight
+                JointType.FootRight,
+
+                JointType.SpineShoulder
 
                 //Exclude hands
             };
@@ -90,7 +93,7 @@ namespace KinectConsole
 
             for (int i=0; i<joint_positions.Count; i++)
             {
-                finalString.AppendFormat("{0:0.000},", joint_positions[i]);
+                finalString.AppendFormat(CultureInfo.InvariantCulture, "{0:0.000},", joint_positions[i]);
             }
 
             // Remove the trailing comma
