@@ -3,10 +3,28 @@ import time
 import signal
 import os
 import requests
+import math
 
 import serial
 
 import open3d as o3d
+
+def vector_from_to(a, b):
+    """Returns the vector from point a to point b."""
+    return [b['x'] - a['x'], b['y'] - a['y'], b['z'] - a['z']]
+
+def vector_angle(v1, v2):
+    """Calculates the angle in degrees between two 3D vectors."""
+    dot = sum(a * b for a, b in zip(v1, v2))
+    mag1 = math.sqrt(sum(a * a for a in v1))
+    mag2 = math.sqrt(sum(b * b for b in v2))
+    
+    if mag1 == 0 or mag2 == 0:
+        return 0  # Cannot compute angle with zero-length vector
+    
+    cos_angle = max(-1.0, min(1.0, dot / (mag1 * mag2)))  # Clamp to avoid floating-point errors
+    angle_rad = math.acos(cos_angle)
+    return math.degrees(angle_rad)
 
 def convert_json(values_raw, value_names, error_str, ts):
     json_obj = {}
@@ -53,8 +71,37 @@ def create_initial_dict(value_names):
     return json_obj
 
 def get_exercise():
-    return "biceps"
+    return "biceps_right"
 
+def calculate_metrics(skeleton_json, config):
+    mid_joint = config["mid_joint"]
+    moving_joint = config["moving_joint"]
+    end_joint = config["end_joint"]
+    start_angle = config["start_angle"]
+    end_angle = config["end_angle"]
+
+    # Get positions
+    mid = skeleton_json[mid_joint]
+    moving = skeleton_json[moving_joint]
+    end = skeleton_json[end_joint]
+
+    # Vectors
+    vec1 = vector_from_to(mid, end)
+    vec2 = vector_from_to(mid, moving)
+
+    # Compute angle
+    angle = vector_angle(vec1, vec2)
+
+    # Normalize angle to completeness percentage
+    angle_range = start_angle - end_angle
+    if angle_range == 0:
+        completeness = 0.0  # Avoid division by zero
+    else:
+        completeness = (start_angle - angle) / angle_range * 100
+        completeness = max(0.0, min(100.0, completeness))  # Clamp to 0-100%
+
+    # Update JSON
+    skeleton_json["completeness"] = completeness
 
 pox_names = ["total_phase","breath_phase","heart_phase","breath_rate","heart_rate","distance"]
 kinect_names = [
@@ -73,6 +120,58 @@ kinect_connections = [
     ("spine_base","hip_left"),("hip_left","knee_left"),("knee_left","ankle_left"),("ankle_left","foot_left"),
     ("spine_base","hip_right"),("hip_right","knee_right"),("knee_right","ankle_right"),("ankle_right","foot_right")
 ]
+
+exercises = {
+    "biceps_right": {
+        "mid_joint": "elbow_right",
+        "moving_joint": "wrist_right",
+        "end_joint": "shoulder_right",
+        "exclude": ["hand_right"],
+        "start_angle": 180,
+        "end_angle": 0,
+    },
+    "biceps_left": {
+        "mid_joint": "elbow_left",
+        "moving_joint": "wrist_left",
+        "end_joint": "shoulder_left",
+        "exclude": ["hand_left"],
+        "start_angle": 180,
+        "end_angle": 0,
+    },
+    "quad_right": {
+        "mid_joint": "knee_right",
+        "moving_joint": "ankle_right",
+        "end_joint": "hip_right",
+        "exclude": ["foot_right"],
+        "start_angle": 90,
+        "end_angle": 180,
+    },
+    "quad_left": {
+        "mid_joint": "knee_left",
+        "moving_joint": "ankle_left",
+        "end_joint": "hip_left",
+        "exclude": ["foot_left"],
+        "start_angle": 90,
+        "end_angle": 180,
+    },
+    "triceps_right": {
+        "mid_joint": "elbow_right",
+        "moving_joint": "wrist_right",
+        "end_joint": "shoulder_right",
+        "exclude": ["hand_right"],
+        "start_angle": 0,
+        "end_angle": 180,
+    },
+    "triceps_left": {
+        "mid_joint": "elbow_left",
+        "moving_joint": "wrist_left",
+        "end_joint": "shoulder_left",
+        "exclude": ["hand_left"],
+        "start_angle": 0,
+        "end_angle": 180,
+    }
+}
+
 
 SERIAL_PORT = "COM5"
 BAUD_RATE = 115200
@@ -159,8 +258,11 @@ try:
 
             kinect_json["timestamp"] = time_val
 
+            calculate_metrics(kinect_json, exercises[exercise])
 
-            print(f"KINECT ({i}):", line)
+
+            #print(f"KINECT ({i}):", line)
+            print(kinect_json["completeness"])
             i+=1
         elif debug_lines:
             vis.poll_events()
