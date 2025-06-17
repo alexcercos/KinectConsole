@@ -13,6 +13,13 @@ def vector_from_to(a, b):
     """Returns the vector from point a to point b."""
     return [b['x'] - a['x'], b['y'] - a['y'], b['z'] - a['z']]
 
+def distance_between_points(p1, p2):
+    """Returns the Euclidean distance between two 3D points."""
+    dx = p2['x'] - p1['x']
+    dy = p2['y'] - p1['y']
+    dz = p2['z'] - p1['z']
+    return math.sqrt(dx*dx + dy*dy + dz*dz)
+
 def vector_angle(v1, v2):
     """Calculates the angle in degrees between two 3D vectors."""
     dot = sum(a * b for a, b in zip(v1, v2))
@@ -73,7 +80,7 @@ def create_initial_dict(value_names):
 def get_exercise():
     return "biceps_right"
 
-def calculate_metrics(skeleton_json, config):
+def calculate_metrics(skeleton_json, prev_skel, config):
     mid_joint = config["mid_joint"]
     moving_joint = config["moving_joint"]
     end_joint = config["end_joint"]
@@ -103,6 +110,20 @@ def calculate_metrics(skeleton_json, config):
     # Update JSON
     skeleton_json["completeness"] = completeness
 
+    if prev_skel is None:
+        skeleton_json["instability"] = 0.0
+        return
+    
+    total = 0.0
+
+    for joint in kinect_names:
+        if joint in config["exclude"]:
+            continue
+
+        total += distance_between_points(prev_skel[joint],skeleton_json[joint])
+
+    skeleton_json["instability"] = total
+
 pox_names = ["total_phase","breath_phase","heart_phase","breath_rate","heart_rate","distance"]
 kinect_names = [
     "spine_base", "spine_mid", "neck", "head",
@@ -126,7 +147,7 @@ exercises = {
         "mid_joint": "elbow_right",
         "moving_joint": "wrist_right",
         "end_joint": "shoulder_right",
-        "exclude": ["hand_right"],
+        "exclude": ["hand_right","wrist_right"],
         "start_angle": 180,
         "end_angle": 0,
     },
@@ -134,7 +155,7 @@ exercises = {
         "mid_joint": "elbow_left",
         "moving_joint": "wrist_left",
         "end_joint": "shoulder_left",
-        "exclude": ["hand_left"],
+        "exclude": ["hand_left","wrist_left"],
         "start_angle": 180,
         "end_angle": 0,
     },
@@ -142,7 +163,7 @@ exercises = {
         "mid_joint": "knee_right",
         "moving_joint": "ankle_right",
         "end_joint": "hip_right",
-        "exclude": ["foot_right"],
+        "exclude": ["foot_right","ankle_right"],
         "start_angle": 90,
         "end_angle": 180,
     },
@@ -150,7 +171,7 @@ exercises = {
         "mid_joint": "knee_left",
         "moving_joint": "ankle_left",
         "end_joint": "hip_left",
-        "exclude": ["foot_left"],
+        "exclude": ["foot_left","ankle_left"],
         "start_angle": 90,
         "end_angle": 180,
     },
@@ -158,7 +179,7 @@ exercises = {
         "mid_joint": "elbow_right",
         "moving_joint": "wrist_right",
         "end_joint": "shoulder_right",
-        "exclude": ["hand_right"],
+        "exclude": ["hand_right","wrist_right"],
         "start_angle": 0,
         "end_angle": 180,
     },
@@ -166,7 +187,7 @@ exercises = {
         "mid_joint": "elbow_left",
         "moving_joint": "wrist_left",
         "end_joint": "shoulder_left",
-        "exclude": ["hand_left"],
+        "exclude": ["hand_left","wrist_left"],
         "start_angle": 0,
         "end_angle": 180,
     }
@@ -204,7 +225,6 @@ pcd = None
 
 try:
     i=0
-    running = False
 
     if debug_lines:
         vis = o3d.visualization.Visualizer()
@@ -229,6 +249,9 @@ try:
 
         vis.add_geometry(pcd)
 
+        #restart before loop
+        kinect_json = None
+
     while True:
         
         exercise = get_exercise()
@@ -245,6 +268,7 @@ try:
         if line != "":
 
             #Make json
+            prev_json = kinect_json
             kinect_json = convert_json_kinect(line, kinect_names, "ERROR: WRONG KINECT VALUE LENGTH")
 
             if debug_lines:
@@ -258,11 +282,13 @@ try:
 
             kinect_json["timestamp"] = time_val
 
-            calculate_metrics(kinect_json, exercises[exercise])
+            calculate_metrics(kinect_json, prev_json, exercises[exercise])
 
 
             #print(f"KINECT ({i}):", line)
-            print(kinect_json["completeness"])
+            comp = kinect_json["completeness"]
+            instability = kinect_json["instability"]
+            print(f"COMPLETO: {comp:.3f} %    MOVIMIENTO: {instability}")
             i+=1
         elif debug_lines:
             vis.poll_events()
