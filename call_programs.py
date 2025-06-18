@@ -4,6 +4,7 @@ import signal
 import os
 import requests
 import math
+import pickle
 
 import serial
 
@@ -148,48 +149,48 @@ exercises = {
         "moving_joint": "wrist_right",
         "end_joint": "shoulder_right",
         "exclude": ["hand_right","wrist_right"],
-        "start_angle": 180,
-        "end_angle": 0,
+        "start_angle": 175,
+        "end_angle": 30,
     },
     "biceps_left": {
         "mid_joint": "elbow_left",
         "moving_joint": "wrist_left",
         "end_joint": "shoulder_left",
         "exclude": ["hand_left","wrist_left"],
-        "start_angle": 180,
-        "end_angle": 0,
+        "start_angle": 175,
+        "end_angle": 30,
     },
     "quad_right": {
         "mid_joint": "knee_right",
         "moving_joint": "ankle_right",
         "end_joint": "hip_right",
         "exclude": ["foot_right","ankle_right"],
-        "start_angle": 90,
-        "end_angle": 180,
+        "start_angle": 80,
+        "end_angle": 170,
     },
     "quad_left": {
         "mid_joint": "knee_left",
         "moving_joint": "ankle_left",
         "end_joint": "hip_left",
         "exclude": ["foot_left","ankle_left"],
-        "start_angle": 90,
-        "end_angle": 180,
+        "start_angle": 80,
+        "end_angle": 170,
     },
     "triceps_right": {
         "mid_joint": "elbow_right",
         "moving_joint": "wrist_right",
         "end_joint": "shoulder_right",
         "exclude": ["hand_right","wrist_right"],
-        "start_angle": 0,
-        "end_angle": 180,
+        "start_angle": 30,
+        "end_angle": 170,
     },
     "triceps_left": {
         "mid_joint": "elbow_left",
         "moving_joint": "wrist_left",
         "end_joint": "shoulder_left",
         "exclude": ["hand_left","wrist_left"],
-        "start_angle": 0,
-        "end_angle": 180,
+        "start_angle": 30,
+        "end_angle": 170,
     }
 }
 
@@ -218,6 +219,9 @@ except serial.SerialException:
 
 debug_lines = True
 vis = None
+
+save_data = True
+complete_data = []
 
 exercise = None
 line_set = None
@@ -288,6 +292,10 @@ try:
             #print(f"KINECT ({i}):", line)
             comp = kinect_json["completeness"]
             instability = kinect_json["instability"]
+
+            if save_data:
+                complete_data.append(["kinect",kinect_json])
+            
             print(f"COMPLETO: {comp:.3f} %    MOVIMIENTO: {instability}")
             i+=1
         elif debug_lines:
@@ -305,6 +313,8 @@ try:
 
             json_obj = convert_json(line, pox_names, "ERROR: WRONG POX VALUE LENGTH",time_val)
             
+            if save_data:
+                complete_data.append(["pox",json_obj])
 
             print(f"POX ({i}):",line)
             i+=1
@@ -317,6 +327,10 @@ finally:
 
     if debug_lines:
         vis.destroy_window()
+    
+    if save_data:
+        with open('exercise.pkl', 'wb') as handle:
+            pickle.dump(complete_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # Send CTRL_BREAK_EVENT (can only be sent to process groups)
     process.send_signal(signal.CTRL_BREAK_EVENT)
