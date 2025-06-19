@@ -10,6 +10,18 @@ import serial
 
 import open3d as o3d
 
+exercises_names = [
+    "biceps_right",
+    "biceps_left",
+    "quad_right",
+    "quad_left",
+    "triceps_right",
+    "triceps_left",
+    None
+]
+
+backend_url = "http://127.0.0.1:5000"
+
 def vector_from_to(a, b):
     """Returns the vector from point a to point b."""
     return [b['x'] - a['x'], b['y'] - a['y'], b['z'] - a['z']]
@@ -58,11 +70,11 @@ def convert_json_kinect(values_raw, value_names, error_str):
         return json_obj
 
     for i,n in enumerate(value_names):
-        json_obj[n] = {
+        json_obj[n] = str({
             "x": float(values[i*3]),
             "y": float(values[i*3+1]),
             "z": float(values[i*3+2]),
-        }
+        })
 
     return json_obj
 
@@ -79,6 +91,12 @@ def create_initial_dict(value_names):
     return json_obj
 
 def get_exercise():
+#     exercise_resp = requests.get(f"{backend_url}/getCurrentExercise",json={"user_id": 0}, timeout=1)
+    
+#     json_resp = exercise_resp.json()
+#     print("Exercise:",exercises_names[json_resp["current_exercise"]],json_resp["current_exercise"])
+#     return exercises_names[json_resp["current_exercise"]]
+
     return "biceps_right"
 
 def calculate_metrics(skeleton_json, prev_skel, config):
@@ -288,13 +306,15 @@ try:
 
             calculate_metrics(kinect_json, prev_json, exercises[exercise])
 
-
-            #print(f"KINECT ({i}):", line)
             comp = kinect_json["completeness"]
             instability = kinect_json["instability"]
+            #TODO send json
+            # requests.post("url kinect", json=kinect_json)
 
             if save_data:
                 complete_data.append(["kinect",kinect_json])
+
+            #print(f"KINECT ({i}):", line)
             
             print(f"COMPLETO: {comp:.3f} %    MOVIMIENTO: {instability}")
             i+=1
@@ -313,6 +333,9 @@ try:
 
             json_obj = convert_json(line, pox_names, "ERROR: WRONG POX VALUE LENGTH",time_val)
             
+            #TODO send json
+            # requests.post("url pox", json=json_obj)
+
             if save_data:
                 complete_data.append(["pox",json_obj])
 
