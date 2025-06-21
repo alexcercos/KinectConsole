@@ -3,6 +3,7 @@ import requests
 import pickle
 
 from endpoint import backend_url
+from call_programs import get_exercise
 
 exercises_names = [
     "biceps_right",
@@ -14,51 +15,34 @@ exercises_names = [
     None
 ]
 
-def get_exercise():
-    exercise_resp = requests.get(f"{backend_url}/getCurrentExercise?user_id=1",json={"":""})
-    
-    json_resp = exercise_resp.json()
-    print("Exercise:",exercises_names[json_resp["current_exercise"]],json_resp["current_exercise"])
-    return exercises_names[json_resp["current_exercise"]]
-
 with open('exercise.pkl', "rb") as input_file:
     complete_data = pickle.load(input_file)
 
-# deberia hacerse en frontend
 
-#createSession
-#addExercise
-resp = requests.post(f"{backend_url}/setCurrentExercise", json={"user_id": 0, "exercise": 0}, timeout=1)
-
-#requests.post(f"{backend_url}/createExercise")
-print(resp.text)
-
-exercise = get_exercise()
+exercise, set_id = get_exercise()
 
 while exercise is None: #Wait for exercise start (API)
     time.sleep(0.5)
-    exercise = get_exercise()
+    exercise, set_id = get_exercise()
 
 for entry in complete_data:
     data_type, data_dict = entry
 
     if data_type == "pox":
-        print("P:",data_dict)
+        print("POX",data_dict["timestamp"])
+        data_dict["set_id"] = set_id
         requests.post(f"{backend_url}/sendPox", json=data_dict)
-        #TODO add exercise_id to jsons
+
     else:
-        print("K;",data_dict)
+        print("KINECT",data_dict["timestamp"])
         for k, v in data_dict.items():
             if isinstance(v, dict): data_dict[k] = str(v)
+        data_dict["set_id"] = set_id
         requests.post(f"{backend_url}/sendKinect", json=data_dict)
-        #TODO add exercise_id to jsons
 
-    exercise = get_exercise()
+    exercise,set_id = get_exercise()
 
     if exercise is None:
         break
 
     time.sleep(0.1) #arbitrary time
-
-#TODO
-#setMetrics

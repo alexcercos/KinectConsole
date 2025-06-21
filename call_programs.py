@@ -12,16 +12,6 @@ import open3d as o3d
 
 from endpoint import backend_url
 
-exercises_names = [
-    "biceps_right",
-    "biceps_left",
-    "quad_right",
-    "quad_left",
-    "triceps_right",
-    "triceps_left",
-    None
-]
-
 def vector_from_to(a, b):
     """Returns the vector from point a to point b."""
     return [b['x'] - a['x'], b['y'] - a['y'], b['z'] - a['z']]
@@ -91,13 +81,19 @@ def create_initial_dict(value_names):
     return json_obj
 
 def get_exercise():
-#     exercise_resp = requests.get(f"{backend_url}/getCurrentExercise",json={"user_id": 0}, timeout=1)
+    exercise_resp = requests.get(f"{backend_url}/getCurrentExercise?user_id=1",json={"":""})
     
-#     json_resp = exercise_resp.json()
-#     print("Exercise:",exercises_names[json_resp["current_exercise"]],json_resp["current_exercise"])
-#     return exercises_names[json_resp["current_exercise"]]
+    json_resp = exercise_resp.json()
+    
+    current_id = json_resp["current_exercise"]["exercise"]
+    set_id = json_resp["current_exercise"]["set_id"]
+    if current_id < 0: return None, None
+    
+    resp = requests.get(f"{backend_url}/getExercise?exercise_id={current_id}",json={"":""})
 
-    return "biceps_right"
+    json_name = resp.json()
+
+    return json_name["name"], set_id
 
 def calculate_metrics(skeleton_json, prev_skel, config):
     mid_joint = config["mid_joint"]
@@ -242,6 +238,7 @@ save_data = True
 complete_data = []
 
 exercise = None
+set_id = None
 line_set = None
 pcd = None
 
@@ -276,7 +273,7 @@ try:
 
     while True:
         
-        exercise = get_exercise()
+        exercise, set_id = get_exercise()
 
         if exercise is None:
             time.sleep(0.5)
@@ -308,8 +305,10 @@ try:
 
             comp = kinect_json["completeness"]
             instability = kinect_json["instability"]
-            #TODO send json
-            # requests.post("url kinect", json=kinect_json)
+
+            kinect_json["set_id"] = set_id
+
+            requests.post(f"{backend_url}/sendKinect", json=kinect_json)
 
             if save_data:
                 complete_data.append(["kinect",kinect_json])
@@ -333,8 +332,9 @@ try:
 
             json_obj = convert_json(line, pox_names, "ERROR: WRONG POX VALUE LENGTH",time_val)
             
-            #TODO send json
-            # requests.post("url pox", json=json_obj)
+            json_obj["set_id"] = set_id
+
+            requests.post(f"{backend_url}/sendPox", json=json_obj)
 
             if save_data:
                 complete_data.append(["pox",json_obj])
