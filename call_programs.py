@@ -10,6 +10,8 @@ import serial
 
 import open3d as o3d
 
+from endpoint import backend_url
+
 exercises_names = [
     "biceps_right",
     "biceps_left",
@@ -19,8 +21,6 @@ exercises_names = [
     "triceps_left",
     None
 ]
-
-backend_url = "http://127.0.0.1:5000"
 
 def vector_from_to(a, b):
     """Returns the vector from point a to point b."""

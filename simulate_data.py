@@ -2,6 +2,8 @@ import time
 import requests
 import pickle
 
+from endpoint import backend_url
+
 exercises_names = [
     "biceps_right",
     "biceps_left",
@@ -12,10 +14,8 @@ exercises_names = [
     None
 ]
 
-backend_url = "http://127.0.0.1:5000"
-
 def get_exercise():
-    exercise_resp = requests.get(f"{backend_url}/getCurrentExercise",json={"user_id": 0}, timeout=1)
+    exercise_resp = requests.get(f"{backend_url}/getCurrentExercise?user_id=1",json={"":""})
     
     json_resp = exercise_resp.json()
     print("Exercise:",exercises_names[json_resp["current_exercise"]],json_resp["current_exercise"])
