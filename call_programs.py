@@ -265,6 +265,10 @@ if __name__ == "__main__":
 
             if exercise is None:
                 time.sleep(0.5)
+
+                #discard data
+                ser.readlines()
+                process.stdout.readlines()
                 continue
 
             # READ KINECT
