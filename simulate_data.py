@@ -9,9 +9,10 @@ def get_exercise():
     
     json_resp = exercise_resp.json()
     
+    if json_resp["current_exercise"] == -1: return None, None
+
     current_id = json_resp["current_exercise"]["exercise"]
     set_id = json_resp["current_exercise"]["set_id"]
-    if current_id < 0: return None, None
     
     resp = requests.get(f"{backend_url}/getExercise?exercise_id={current_id}",json={"":""})
 
