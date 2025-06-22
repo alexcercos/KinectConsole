@@ -296,54 +296,54 @@ def main():
             exercise, set_id = get_exercise()
 
             # READ KINECT
-            time_val = time.time()
+            for _ in range(4):
+                line = process.stdout.readline().strip()
 
-            line = process.stdout.readline().strip()
+                if line != "":
 
-            if line != "":
+                    #Make json
+                    prev_json = kinect_json
+                    kinect_json = convert_json_kinect(line, kinect_names, "ERROR: WRONG KINECT VALUE LENGTH")
 
-                #Make json
-                prev_json = kinect_json
-                kinect_json = convert_json_kinect(line, kinect_names, "ERROR: WRONG KINECT VALUE LENGTH")
+                    if debug_lines:
+                        points = [[v["x"], v["y"], v["z"]] for v in kinect_json.values()]
+                        line_set.points = o3d.utility.Vector3dVector(points)
+                        pcd.points = o3d.utility.Vector3dVector(points)
+                        vis.update_geometry(line_set)
+                        vis.update_geometry(pcd)
+                        vis.poll_events()
+                        vis.update_renderer()
 
-                if debug_lines:
-                    points = [[v["x"], v["y"], v["z"]] for v in kinect_json.values()]
-                    line_set.points = o3d.utility.Vector3dVector(points)
-                    pcd.points = o3d.utility.Vector3dVector(points)
-                    vis.update_geometry(line_set)
-                    vis.update_geometry(pcd)
+                    if exercise is not None:
+                        post_json = {}
+
+                        time_val = time.time()
+                        post_json["timestamp"] = time_val
+
+                        calculate_metrics(kinect_json, prev_json, exercises[exercise])
+
+                        comp = kinect_json["completeness"]
+                        instability = kinect_json["instability"]
+
+                        post_json["set_id"] = set_id
+                        post_json["completeness"] = comp
+                        post_json["instability"] = instability
+
+                        schedule_post(f"{backend_url}/sendKinect", post_json)
+                        # requests.post(f"{backend_url}/sendKinect", json=post_json)
+
+                        if save_data:
+                            complete_data.append(["kinect",kinect_json])
+
+                        #print(f"KINECT ({i}):", line)
+                        
+                        print(f"COMPLETO: {comp:.3f} %    MOVIMIENTO: {instability}")
+                    else:
+                        print("Discarded kinect")
+                    i+=1
+                elif debug_lines:
                     vis.poll_events()
                     vis.update_renderer()
-
-                if exercise is not None:
-                    post_json = {}
-
-                    post_json["timestamp"] = time_val
-
-                    calculate_metrics(kinect_json, prev_json, exercises[exercise])
-
-                    comp = kinect_json["completeness"]
-                    instability = kinect_json["instability"]
-
-                    post_json["set_id"] = set_id
-                    post_json["completeness"] = comp
-                    post_json["instability"] = instability
-
-                    schedule_post(f"{backend_url}/sendKinect", post_json)
-                    # requests.post(f"{backend_url}/sendKinect", json=post_json)
-
-                    if save_data:
-                        complete_data.append(["kinect",post_json])
-
-                    #print(f"KINECT ({i}):", line)
-                    
-                    print(f"COMPLETO: {comp:.3f} %    MOVIMIENTO: {instability}")
-                else:
-                    print("Discarded kinect")
-                i+=1
-            elif debug_lines:
-                vis.poll_events()
-                vis.update_renderer()
             
             # READ POX
 
@@ -355,6 +355,7 @@ def main():
             if line != "":
 
                 if exercise is not None:
+                    time_val = time.time()
                     json_obj = convert_json(line, pox_names, "ERROR: WRONG POX VALUE LENGTH",time_val)
                     
                     json_obj["set_id"] = set_id
