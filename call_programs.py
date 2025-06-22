@@ -11,6 +11,7 @@ import serial
 import open3d as o3d
 
 from endpoint import backend_url
+from simulate_data import get_exercise
 
 def vector_from_to(a, b):
     """Returns the vector from point a to point b."""
@@ -79,22 +80,6 @@ def create_initial_dict(value_names):
         }
 
     return json_obj
-
-def get_exercise():
-    exercise_resp = requests.get(f"{backend_url}/getCurrentExercise?user_id=1",json={"":""})
-    
-    json_resp = exercise_resp.json()
-    
-    if json_resp["current_exercise"] == -1: return None, None
-
-    current_id = json_resp["current_exercise"]["exercise"]
-    set_id = json_resp["current_exercise"]["set_id"]
-    
-    resp = requests.get(f"{backend_url}/getExercise?exercise_id={current_id}",json={"":""})
-
-    json_name = resp.json()
-    
-    return json_name[0]["name"], set_id
 
 def calculate_metrics(skeleton_json, prev_skel, config):
     mid_joint = config["mid_joint"]

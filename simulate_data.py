@@ -3,7 +3,21 @@ import requests
 import pickle
 
 from endpoint import backend_url
-from call_programs import get_exercise
+
+def get_exercise():
+    exercise_resp = requests.get(f"{backend_url}/getCurrentExercise?user_id=1",json={"":""})
+    
+    json_resp = exercise_resp.json()
+    
+    current_id = json_resp["current_exercise"]["exercise"]
+    set_id = json_resp["current_exercise"]["set_id"]
+    if current_id < 0: return None, None
+    
+    resp = requests.get(f"{backend_url}/getExercise?exercise_id={current_id}",json={"":""})
+
+    json_name = resp.json()
+
+    return json_name["name"], set_id
 
 exercises_names = [
     "biceps_right",
