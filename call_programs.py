@@ -85,15 +85,16 @@ def get_exercise():
     
     json_resp = exercise_resp.json()
     
+    if json_resp["current_exercise"] == -1: return None, None
+
     current_id = json_resp["current_exercise"]["exercise"]
     set_id = json_resp["current_exercise"]["set_id"]
-    if current_id < 0: return None, None
     
     resp = requests.get(f"{backend_url}/getExercise?exercise_id={current_id}",json={"":""})
 
     json_name = resp.json()
-
-    return json_name["name"], set_id
+    
+    return json_name[0]["name"], set_id
 
 def calculate_metrics(skeleton_json, prev_skel, config):
     mid_joint = config["mid_joint"]
@@ -139,228 +140,230 @@ def calculate_metrics(skeleton_json, prev_skel, config):
 
     skeleton_json["instability"] = total
 
-pox_names = ["total_phase","breath_phase","heart_phase","breath_rate","heart_rate","distance"]
-kinect_names = [
-    "spine_base", "spine_mid", "neck", "head",
-    "shoulder_left","elbow_left","wrist_left","hand_left",
-    "shoulder_right","elbow_right","wrist_right","hand_right",
-    "hip_left","knee_left","ankle_left","foot_left",
-    "hip_right","knee_right","ankle_right","foot_right",
-    "spine_shoulder"
-]
+if __name__ == "__main__":
 
-kinect_connections = [
-    ("head", "neck"),("neck", "spine_shoulder"),("spine_shoulder","spine_mid"),("spine_mid","spine_base"),
-    ("spine_shoulder","shoulder_left"),("shoulder_left","elbow_left"),("elbow_left","wrist_left"),("wrist_left","hand_left"),
-    ("spine_shoulder","shoulder_right"),("shoulder_right","elbow_right"),("elbow_right","wrist_right"),("wrist_right","hand_right"),
-    ("spine_base","hip_left"),("hip_left","knee_left"),("knee_left","ankle_left"),("ankle_left","foot_left"),
-    ("spine_base","hip_right"),("hip_right","knee_right"),("knee_right","ankle_right"),("ankle_right","foot_right")
-]
+    pox_names = ["total_phase","breath_phase","heart_phase","breath_rate","heart_rate","distance"]
+    kinect_names = [
+        "spine_base", "spine_mid", "neck", "head",
+        "shoulder_left","elbow_left","wrist_left","hand_left",
+        "shoulder_right","elbow_right","wrist_right","hand_right",
+        "hip_left","knee_left","ankle_left","foot_left",
+        "hip_right","knee_right","ankle_right","foot_right",
+        "spine_shoulder"
+    ]
 
-exercises = {
-    "biceps_right": {
-        "mid_joint": "elbow_right",
-        "moving_joint": "wrist_right",
-        "end_joint": "shoulder_right",
-        "exclude": ["hand_right","wrist_right"],
-        "start_angle": 175,
-        "end_angle": 30,
-    },
-    "biceps_left": {
-        "mid_joint": "elbow_left",
-        "moving_joint": "wrist_left",
-        "end_joint": "shoulder_left",
-        "exclude": ["hand_left","wrist_left"],
-        "start_angle": 175,
-        "end_angle": 30,
-    },
-    "quad_right": {
-        "mid_joint": "knee_right",
-        "moving_joint": "ankle_right",
-        "end_joint": "hip_right",
-        "exclude": ["foot_right","ankle_right"],
-        "start_angle": 80,
-        "end_angle": 170,
-    },
-    "quad_left": {
-        "mid_joint": "knee_left",
-        "moving_joint": "ankle_left",
-        "end_joint": "hip_left",
-        "exclude": ["foot_left","ankle_left"],
-        "start_angle": 80,
-        "end_angle": 170,
-    },
-    "triceps_right": {
-        "mid_joint": "elbow_right",
-        "moving_joint": "wrist_right",
-        "end_joint": "shoulder_right",
-        "exclude": ["hand_right","wrist_right"],
-        "start_angle": 30,
-        "end_angle": 170,
-    },
-    "triceps_left": {
-        "mid_joint": "elbow_left",
-        "moving_joint": "wrist_left",
-        "end_joint": "shoulder_left",
-        "exclude": ["hand_left","wrist_left"],
-        "start_angle": 30,
-        "end_angle": 170,
+    kinect_connections = [
+        ("head", "neck"),("neck", "spine_shoulder"),("spine_shoulder","spine_mid"),("spine_mid","spine_base"),
+        ("spine_shoulder","shoulder_left"),("shoulder_left","elbow_left"),("elbow_left","wrist_left"),("wrist_left","hand_left"),
+        ("spine_shoulder","shoulder_right"),("shoulder_right","elbow_right"),("elbow_right","wrist_right"),("wrist_right","hand_right"),
+        ("spine_base","hip_left"),("hip_left","knee_left"),("knee_left","ankle_left"),("ankle_left","foot_left"),
+        ("spine_base","hip_right"),("hip_right","knee_right"),("knee_right","ankle_right"),("ankle_right","foot_right")
+    ]
+
+    exercises = {
+        "biceps_right": {
+            "mid_joint": "elbow_right",
+            "moving_joint": "wrist_right",
+            "end_joint": "shoulder_right",
+            "exclude": ["hand_right","wrist_right"],
+            "start_angle": 175,
+            "end_angle": 30,
+        },
+        "biceps_left": {
+            "mid_joint": "elbow_left",
+            "moving_joint": "wrist_left",
+            "end_joint": "shoulder_left",
+            "exclude": ["hand_left","wrist_left"],
+            "start_angle": 175,
+            "end_angle": 30,
+        },
+        "quad_right": {
+            "mid_joint": "knee_right",
+            "moving_joint": "ankle_right",
+            "end_joint": "hip_right",
+            "exclude": ["foot_right","ankle_right"],
+            "start_angle": 80,
+            "end_angle": 170,
+        },
+        "quad_left": {
+            "mid_joint": "knee_left",
+            "moving_joint": "ankle_left",
+            "end_joint": "hip_left",
+            "exclude": ["foot_left","ankle_left"],
+            "start_angle": 80,
+            "end_angle": 170,
+        },
+        "triceps_right": {
+            "mid_joint": "elbow_right",
+            "moving_joint": "wrist_right",
+            "end_joint": "shoulder_right",
+            "exclude": ["hand_right","wrist_right"],
+            "start_angle": 30,
+            "end_angle": 170,
+        },
+        "triceps_left": {
+            "mid_joint": "elbow_left",
+            "moving_joint": "wrist_left",
+            "end_joint": "shoulder_left",
+            "exclude": ["hand_left","wrist_left"],
+            "start_angle": 30,
+            "end_angle": 170,
+        }
     }
-}
 
 
-SERIAL_PORT = "COM5"
-BAUD_RATE = 115200
+    SERIAL_PORT = "COM5"
+    BAUD_RATE = 115200
 
-# Windows-specific flags
-CREATE_NEW_PROCESS_GROUP = 0x00000200
+    # Windows-specific flags
+    CREATE_NEW_PROCESS_GROUP = 0x00000200
 
-# Start process in its own process group
-process = subprocess.Popen(
-    ["C:/Users/Alejandro/Documents/master/IOT/Final/KinectConsole/KinectConsole/bin/Release/KinectConsole.exe"],
-    creationflags=CREATE_NEW_PROCESS_GROUP,
-    stdout=subprocess.PIPE,
-    text=True,            # Decode bytes to strings
-    bufsize=1             # Line-buffered
-)
+    # Start process in its own process group
+    process = subprocess.Popen(
+        ["C:/Users/Alejandro/Documents/master/IOT/Final/KinectConsole/KinectConsole/bin/Release/KinectConsole.exe"],
+        creationflags=CREATE_NEW_PROCESS_GROUP,
+        stdout=subprocess.PIPE,
+        text=True,            # Decode bytes to strings
+        bufsize=1             # Line-buffered
+    )
 
-try:
-    ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
-    print("Opened serial connection")
-except serial.SerialException:
-    print(f"Could not open serial port {SERIAL_PORT}. Check connection")
-    ser = None
+    try:
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+        print("Opened serial connection")
+    except serial.SerialException:
+        print(f"Could not open serial port {SERIAL_PORT}. Check connection")
+        ser = None
 
-debug_lines = True
-vis = None
+    debug_lines = True
+    vis = None
 
-save_data = True
-complete_data = []
+    save_data = True
+    complete_data = []
 
-exercise = None
-set_id = None
-line_set = None
-pcd = None
+    exercise = None
+    set_id = None
+    line_set = None
+    pcd = None
 
-try:
-    i=0
+    try:
+        i=0
 
-    if debug_lines:
-        vis = o3d.visualization.Visualizer()
-        vis.create_window()
+        if debug_lines:
+            vis = o3d.visualization.Visualizer()
+            vis.create_window()
 
-        kinect_json = create_initial_dict(kinect_names)
-        points = [[v["x"], v["y"], v["z"]] for v in kinect_json.values()]
-        lines = [[list(kinect_json.keys()).index(a), list(kinect_json.keys()).index(b)] for a, b in kinect_connections]
-        
-        line_set = o3d.geometry.LineSet(
-            points=o3d.utility.Vector3dVector(points),
-            lines=o3d.utility.Vector2iVector(lines),
-        )
-        vis.add_geometry(line_set)
+            kinect_json = create_initial_dict(kinect_names)
+            points = [[v["x"], v["y"], v["z"]] for v in kinect_json.values()]
+            lines = [[list(kinect_json.keys()).index(a), list(kinect_json.keys()).index(b)] for a, b in kinect_connections]
+            
+            line_set = o3d.geometry.LineSet(
+                points=o3d.utility.Vector3dVector(points),
+                lines=o3d.utility.Vector2iVector(lines),
+            )
+            vis.add_geometry(line_set)
 
-        coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0)
-        vis.add_geometry(coord_frame)
+            coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0)
+            vis.add_geometry(coord_frame)
 
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(points)
-        pcd.paint_uniform_color([0, 1, 0])  # Green points
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(points)
+            pcd.paint_uniform_color([0, 1, 0])  # Green points
 
-        vis.add_geometry(pcd)
+            vis.add_geometry(pcd)
 
-        #restart before loop
-        kinect_json = None
+            #restart before loop
+            kinect_json = None
 
-    while True:
-        
-        exercise, set_id = get_exercise()
+        while True:
+            
+            exercise, set_id = get_exercise()
 
-        if exercise is None:
-            time.sleep(0.5)
-            continue
+            if exercise is None:
+                time.sleep(0.5)
+                continue
 
-        # READ KINECT
-        time_val = time.time()
+            # READ KINECT
+            time_val = time.time()
 
-        line = process.stdout.readline().strip()
+            line = process.stdout.readline().strip()
 
-        if line != "":
+            if line != "":
 
-            #Make json
-            prev_json = kinect_json
-            kinect_json = convert_json_kinect(line, kinect_names, "ERROR: WRONG KINECT VALUE LENGTH")
+                #Make json
+                prev_json = kinect_json
+                kinect_json = convert_json_kinect(line, kinect_names, "ERROR: WRONG KINECT VALUE LENGTH")
 
-            if debug_lines:
-                points = [[v["x"], v["y"], v["z"]] for v in kinect_json.values()]
-                line_set.points = o3d.utility.Vector3dVector(points)
-                pcd.points = o3d.utility.Vector3dVector(points)
-                vis.update_geometry(line_set)
-                vis.update_geometry(pcd)
+                if debug_lines:
+                    points = [[v["x"], v["y"], v["z"]] for v in kinect_json.values()]
+                    line_set.points = o3d.utility.Vector3dVector(points)
+                    pcd.points = o3d.utility.Vector3dVector(points)
+                    vis.update_geometry(line_set)
+                    vis.update_geometry(pcd)
+                    vis.poll_events()
+                    vis.update_renderer()
+
+                kinect_json["timestamp"] = time_val
+
+                calculate_metrics(kinect_json, prev_json, exercises[exercise])
+
+                comp = kinect_json["completeness"]
+                instability = kinect_json["instability"]
+
+                kinect_json["set_id"] = set_id
+
+                requests.post(f"{backend_url}/sendKinect", json=kinect_json)
+
+                if save_data:
+                    complete_data.append(["kinect",kinect_json])
+
+                #print(f"KINECT ({i}):", line)
+                
+                print(f"COMPLETO: {comp:.3f} %    MOVIMIENTO: {instability}")
+                i+=1
+            elif debug_lines:
                 vis.poll_events()
                 vis.update_renderer()
-
-            kinect_json["timestamp"] = time_val
-
-            calculate_metrics(kinect_json, prev_json, exercises[exercise])
-
-            comp = kinect_json["completeness"]
-            instability = kinect_json["instability"]
-
-            kinect_json["set_id"] = set_id
-
-            requests.post(f"{backend_url}/sendKinect", json=kinect_json)
-
-            if save_data:
-                complete_data.append(["kinect",kinect_json])
-
-            #print(f"KINECT ({i}):", line)
             
-            print(f"COMPLETO: {comp:.3f} %    MOVIMIENTO: {instability}")
-            i+=1
-        elif debug_lines:
-            vis.poll_events()
-            vis.update_renderer()
+            # READ POX
+
+            if ser is None:
+                continue
+
+            line = ser.readline().decode("utf-8").strip()
+
+            if line != "":
+
+                json_obj = convert_json(line, pox_names, "ERROR: WRONG POX VALUE LENGTH",time_val)
+                
+                json_obj["set_id"] = set_id
+
+                requests.post(f"{backend_url}/sendPox", json=json_obj)
+
+                if save_data:
+                    complete_data.append(["pox",json_obj])
+
+                print(f"POX ({i}):",line)
+                i+=1
+
+
+    except KeyboardInterrupt:
+        print('Interrupted')
+
+    finally:
+
+        if debug_lines:
+            vis.destroy_window()
         
-        # READ POX
+        if save_data:
+            with open('exercise.pkl', 'wb') as handle:
+                pickle.dump(complete_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        if ser is None:
-            continue
+        # Send CTRL_BREAK_EVENT (can only be sent to process groups)
+        process.send_signal(signal.CTRL_BREAK_EVENT)
 
-        line = ser.readline().decode("utf-8").strip()
+        for line in process.stdout:
+            print("Received (end):", line.strip())
 
-        if line != "":
-
-            json_obj = convert_json(line, pox_names, "ERROR: WRONG POX VALUE LENGTH",time_val)
-            
-            json_obj["set_id"] = set_id
-
-            requests.post(f"{backend_url}/sendPox", json=json_obj)
-
-            if save_data:
-                complete_data.append(["pox",json_obj])
-
-            print(f"POX ({i}):",line)
-            i+=1
-
-
-except KeyboardInterrupt:
-    print('Interrupted')
-
-finally:
-
-    if debug_lines:
-        vis.destroy_window()
-    
-    if save_data:
-        with open('exercise.pkl', 'wb') as handle:
-            pickle.dump(complete_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    # Send CTRL_BREAK_EVENT (can only be sent to process groups)
-    process.send_signal(signal.CTRL_BREAK_EVENT)
-
-    for line in process.stdout:
-        print("Received (end):", line.strip())
-
-    if ser is not None and ser.is_open:
-        ser.close()
-        print("Serial connection closed")
+        if ser is not None and ser.is_open:
+            ser.close()
+            print("Serial connection closed")
