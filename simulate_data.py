@@ -20,34 +20,35 @@ def get_exercise():
 
     return json_name[0]["name"], set_id
 
-with open('exercise.pkl', "rb") as input_file:
-    complete_data = pickle.load(input_file)
+if __name__ == "__main__":
+    with open('exercise.pkl', "rb") as input_file:
+        complete_data = pickle.load(input_file)
 
 
-exercise, set_id = get_exercise()
-
-while exercise is None: #Wait for exercise start (API)
-    time.sleep(0.5)
     exercise, set_id = get_exercise()
 
-for entry in complete_data:
-    data_type, data_dict = entry
+    while exercise is None: #Wait for exercise start (API)
+        time.sleep(0.5)
+        exercise, set_id = get_exercise()
 
-    if data_type == "pox":
-        print("POX",data_dict["timestamp"])
-        data_dict["set_id"] = set_id
-        requests.post(f"{backend_url}/sendPox", json=data_dict)
+    for entry in complete_data:
+        data_type, data_dict = entry
 
-    else:
-        print("KINECT",data_dict["timestamp"])
-        for k, v in data_dict.items():
-            if isinstance(v, dict): data_dict[k] = str(v)
-        data_dict["set_id"] = set_id
-        requests.post(f"{backend_url}/sendKinect", json=data_dict)
+        if data_type == "pox":
+            print("POX",data_dict["timestamp"])
+            data_dict["set_id"] = set_id
+            requests.post(f"{backend_url}/sendPox", json=data_dict)
 
-    exercise,set_id = get_exercise()
+        else:
+            print("KINECT",data_dict["timestamp"])
+            for k, v in data_dict.items():
+                if isinstance(v, dict): data_dict[k] = str(v)
+            data_dict["set_id"] = set_id
+            requests.post(f"{backend_url}/sendKinect", json=data_dict)
 
-    if exercise is None:
-        break
+        exercise,set_id = get_exercise()
 
-    time.sleep(0.1) #arbitrary time
+        if exercise is None:
+            break
+
+        time.sleep(0.1) #arbitrary time
