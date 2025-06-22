@@ -17,7 +17,7 @@ def get_exercise():
 
     json_name = resp.json()
 
-    return json_name["name"], set_id
+    return json_name[0]["name"], set_id
 
 exercises_names = [
     "biceps_right",
