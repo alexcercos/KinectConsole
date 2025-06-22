@@ -20,16 +20,6 @@ def get_exercise():
 
     return json_name[0]["name"], set_id
 
-exercises_names = [
-    "biceps_right",
-    "biceps_left",
-    "quad_right",
-    "quad_left",
-    "triceps_right",
-    "triceps_left",
-    None
-]
-
 with open('exercise.pkl', "rb") as input_file:
     complete_data = pickle.load(input_file)
 

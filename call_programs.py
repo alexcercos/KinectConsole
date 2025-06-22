@@ -222,7 +222,7 @@ if __name__ == "__main__":
     debug_lines = True
     vis = None
 
-    save_data = True
+    save_data = False
     complete_data = []
 
     exercise = None
