@@ -13,6 +13,30 @@ import open3d as o3d
 from endpoint import backend_url
 from simulate_data import get_exercise
 
+
+import asyncio
+import threading
+
+def post_async(url, json_data):
+    try:
+        requests.post(url, json=json_data)
+    except Exception as e:
+        print(f"Post failed: {e}")
+
+def start_loop(loop):
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+new_loop = asyncio.new_event_loop()
+t = threading.Thread(target=start_loop, args=(new_loop,), daemon=True)
+t.start()
+
+def schedule_post(url, json_data):
+    asyncio.run_coroutine_threadsafe(
+        asyncio.to_thread(post_async, url, json_data),
+        new_loop
+    )
+
 def vector_from_to(a, b):
     """Returns the vector from point a to point b."""
     return [b['x'] - a['x'], b['y'] - a['y'], b['z'] - a['z']]
@@ -61,13 +85,20 @@ def convert_json_kinect(values_raw, value_names, error_str):
         return json_obj
 
     for i,n in enumerate(value_names):
-        json_obj[n] = str({
+        json_obj[n] = {
             "x": float(values[i*3]),
             "y": float(values[i*3+1]),
             "z": float(values[i*3+2]),
-        })
+        }
 
     return json_obj
+
+def convert_json_post(json_obj):
+    valid_json = {}
+    for key in json_obj:
+        valid_json[key] = str(json_obj[key])
+
+    return valid_json
 
 def create_initial_dict(value_names):
     json_obj = {}
@@ -125,77 +156,77 @@ def calculate_metrics(skeleton_json, prev_skel, config):
 
     skeleton_json["instability"] = total
 
-if __name__ == "__main__":
 
-    pox_names = ["total_phase","breath_phase","heart_phase","breath_rate","heart_rate","distance"]
-    kinect_names = [
-        "spine_base", "spine_mid", "neck", "head",
-        "shoulder_left","elbow_left","wrist_left","hand_left",
-        "shoulder_right","elbow_right","wrist_right","hand_right",
-        "hip_left","knee_left","ankle_left","foot_left",
-        "hip_right","knee_right","ankle_right","foot_right",
-        "spine_shoulder"
-    ]
+pox_names = ["breath_rate","heart_rate"]
+kinect_names = [
+    "spine_base", "spine_mid", "neck", "head",
+    "shoulder_left","elbow_left","wrist_left","hand_left",
+    "shoulder_right","elbow_right","wrist_right","hand_right",
+    "hip_left","knee_left","ankle_left","foot_left",
+    "hip_right","knee_right","ankle_right","foot_right",
+    "spine_shoulder"
+]
 
-    kinect_connections = [
-        ("head", "neck"),("neck", "spine_shoulder"),("spine_shoulder","spine_mid"),("spine_mid","spine_base"),
-        ("spine_shoulder","shoulder_left"),("shoulder_left","elbow_left"),("elbow_left","wrist_left"),("wrist_left","hand_left"),
-        ("spine_shoulder","shoulder_right"),("shoulder_right","elbow_right"),("elbow_right","wrist_right"),("wrist_right","hand_right"),
-        ("spine_base","hip_left"),("hip_left","knee_left"),("knee_left","ankle_left"),("ankle_left","foot_left"),
-        ("spine_base","hip_right"),("hip_right","knee_right"),("knee_right","ankle_right"),("ankle_right","foot_right")
-    ]
+kinect_connections = [
+    ("head", "neck"),("neck", "spine_shoulder"),("spine_shoulder","spine_mid"),("spine_mid","spine_base"),
+    ("spine_shoulder","shoulder_left"),("shoulder_left","elbow_left"),("elbow_left","wrist_left"),("wrist_left","hand_left"),
+    ("spine_shoulder","shoulder_right"),("shoulder_right","elbow_right"),("elbow_right","wrist_right"),("wrist_right","hand_right"),
+    ("spine_base","hip_left"),("hip_left","knee_left"),("knee_left","ankle_left"),("ankle_left","foot_left"),
+    ("spine_base","hip_right"),("hip_right","knee_right"),("knee_right","ankle_right"),("ankle_right","foot_right")
+]
 
-    exercises = {
-        "biceps_right": {
-            "mid_joint": "elbow_right",
-            "moving_joint": "wrist_right",
-            "end_joint": "shoulder_right",
-            "exclude": ["hand_right","wrist_right"],
-            "start_angle": 175,
-            "end_angle": 30,
-        },
-        "biceps_left": {
-            "mid_joint": "elbow_left",
-            "moving_joint": "wrist_left",
-            "end_joint": "shoulder_left",
-            "exclude": ["hand_left","wrist_left"],
-            "start_angle": 175,
-            "end_angle": 30,
-        },
-        "quad_right": {
-            "mid_joint": "knee_right",
-            "moving_joint": "ankle_right",
-            "end_joint": "hip_right",
-            "exclude": ["foot_right","ankle_right"],
-            "start_angle": 80,
-            "end_angle": 170,
-        },
-        "quad_left": {
-            "mid_joint": "knee_left",
-            "moving_joint": "ankle_left",
-            "end_joint": "hip_left",
-            "exclude": ["foot_left","ankle_left"],
-            "start_angle": 80,
-            "end_angle": 170,
-        },
-        "triceps_right": {
-            "mid_joint": "elbow_right",
-            "moving_joint": "wrist_right",
-            "end_joint": "shoulder_right",
-            "exclude": ["hand_right","wrist_right"],
-            "start_angle": 30,
-            "end_angle": 170,
-        },
-        "triceps_left": {
-            "mid_joint": "elbow_left",
-            "moving_joint": "wrist_left",
-            "end_joint": "shoulder_left",
-            "exclude": ["hand_left","wrist_left"],
-            "start_angle": 30,
-            "end_angle": 170,
-        }
+exercises = {
+    "biceps_right": {
+        "mid_joint": "elbow_right",
+        "moving_joint": "wrist_right",
+        "end_joint": "shoulder_right",
+        "exclude": ["hand_right","wrist_right"],
+        "start_angle": 175,
+        "end_angle": 30,
+    },
+    "biceps_left": {
+        "mid_joint": "elbow_left",
+        "moving_joint": "wrist_left",
+        "end_joint": "shoulder_left",
+        "exclude": ["hand_left","wrist_left"],
+        "start_angle": 175,
+        "end_angle": 30,
+    },
+    "quad_right": {
+        "mid_joint": "knee_right",
+        "moving_joint": "ankle_right",
+        "end_joint": "hip_right",
+        "exclude": ["foot_right","ankle_right"],
+        "start_angle": 80,
+        "end_angle": 170,
+    },
+    "quad_left": {
+        "mid_joint": "knee_left",
+        "moving_joint": "ankle_left",
+        "end_joint": "hip_left",
+        "exclude": ["foot_left","ankle_left"],
+        "start_angle": 80,
+        "end_angle": 170,
+    },
+    "triceps_right": {
+        "mid_joint": "elbow_right",
+        "moving_joint": "wrist_right",
+        "end_joint": "shoulder_right",
+        "exclude": ["hand_right","wrist_right"],
+        "start_angle": 30,
+        "end_angle": 170,
+    },
+    "triceps_left": {
+        "mid_joint": "elbow_left",
+        "moving_joint": "wrist_left",
+        "end_joint": "shoulder_left",
+        "exclude": ["hand_left","wrist_left"],
+        "start_angle": 30,
+        "end_angle": 170,
     }
+}
 
+def main():
 
     SERIAL_PORT = "COM5"
     BAUD_RATE = 115200
@@ -219,7 +250,7 @@ if __name__ == "__main__":
         print(f"Could not open serial port {SERIAL_PORT}. Check connection")
         ser = None
 
-    debug_lines = True
+    debug_lines = False
     vis = None
 
     save_data = False
@@ -229,6 +260,7 @@ if __name__ == "__main__":
     set_id = None
     line_set = None
     pcd = None
+    kinect_json = None
 
     try:
         i=0
@@ -263,14 +295,6 @@ if __name__ == "__main__":
             
             exercise, set_id = get_exercise()
 
-            if exercise is None:
-                time.sleep(0.5)
-
-                #discard data
-                ser.readlines()
-                process.stdout.readlines()
-                continue
-
             # READ KINECT
             time_val = time.time()
 
@@ -291,23 +315,31 @@ if __name__ == "__main__":
                     vis.poll_events()
                     vis.update_renderer()
 
-                kinect_json["timestamp"] = time_val
+                if exercise is not None:
+                    post_json = {}
 
-                calculate_metrics(kinect_json, prev_json, exercises[exercise])
+                    post_json["timestamp"] = time_val
 
-                comp = kinect_json["completeness"]
-                instability = kinect_json["instability"]
+                    calculate_metrics(kinect_json, prev_json, exercises[exercise])
 
-                kinect_json["set_id"] = set_id
+                    comp = kinect_json["completeness"]
+                    instability = kinect_json["instability"]
 
-                requests.post(f"{backend_url}/sendKinect", json=kinect_json)
+                    post_json["set_id"] = set_id
+                    post_json["completeness"] = comp
+                    post_json["instability"] = instability
 
-                if save_data:
-                    complete_data.append(["kinect",kinect_json])
+                    schedule_post(f"{backend_url}/sendKinect", post_json)
+                    # requests.post(f"{backend_url}/sendKinect", json=post_json)
 
-                #print(f"KINECT ({i}):", line)
-                
-                print(f"COMPLETO: {comp:.3f} %    MOVIMIENTO: {instability}")
+                    if save_data:
+                        complete_data.append(["kinect",post_json])
+
+                    #print(f"KINECT ({i}):", line)
+                    
+                    print(f"COMPLETO: {comp:.3f} %    MOVIMIENTO: {instability}")
+                else:
+                    print("Discarded kinect")
                 i+=1
             elif debug_lines:
                 vis.poll_events()
@@ -322,16 +354,21 @@ if __name__ == "__main__":
 
             if line != "":
 
-                json_obj = convert_json(line, pox_names, "ERROR: WRONG POX VALUE LENGTH",time_val)
+                if exercise is not None:
+                    json_obj = convert_json(line, pox_names, "ERROR: WRONG POX VALUE LENGTH",time_val)
+                    
+                    json_obj["set_id"] = set_id
+
+                    schedule_post(f"{backend_url}/sendPox", json_obj)
+                    # requests.post(f"{backend_url}/sendPox", json=json_obj)
+
+                    if save_data:
+                        complete_data.append(["pox",json_obj])
+
+                    print(f"POX ({i}):",line)
+                else:
+                    print("Discarded POX")
                 
-                json_obj["set_id"] = set_id
-
-                requests.post(f"{backend_url}/sendPox", json=json_obj)
-
-                if save_data:
-                    complete_data.append(["pox",json_obj])
-
-                print(f"POX ({i}):",line)
                 i+=1
 
 
@@ -344,7 +381,7 @@ if __name__ == "__main__":
             vis.destroy_window()
         
         if save_data:
-            with open('exercise.pkl', 'wb') as handle:
+            with open('exercise2.pkl', 'wb') as handle:
                 pickle.dump(complete_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         # Send CTRL_BREAK_EVENT (can only be sent to process groups)
@@ -356,3 +393,6 @@ if __name__ == "__main__":
         if ser is not None and ser.is_open:
             ser.close()
             print("Serial connection closed")
+
+if __name__ == "__main__":
+    main()

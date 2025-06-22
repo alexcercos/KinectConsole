@@ -175,7 +175,7 @@ namespace KinectConsole
 
             while (keepRunning)
             {
-                Thread.Sleep(100);
+                Thread.Sleep(250);
                 Console.WriteLine(kinect_program.GetCurrentInfo());
             }
             
